@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [com.google.crypto.tink/tink "1.11.0"]
-                 [org.clojure/tools.cli "1.0.219"]]
+                 [org.clojure/tools.cli "1.0.219"]
+                 [org.apache.commons/commons-compress "1.24.0"]]
   :main yap.core
   :target-path "target/%s"
   :java-source-paths ["src/java"]
