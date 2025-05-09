@@ -1,0 +1,103 @@
+* yap: Secure File Sharing via Asymmetric Encryption
+
+** Overview
+This project is a proof-of-concept Clojure CLI tool that allows secure file sharing using hybrid encryption.
+Files are encrypted symmetrically with AES, and the AES key is encrypted with multiple recipients' public keys.
+Each recipient can decrypt the file using their corresponding private key.
+
+** Goals
+- Provide a CLI tool to encrypt files once and allow multiple recipients to decrypt them
+- Store encrypted files and encrypted AES keys in a public Git repository
+- Enable GraalVM native-image compilation for portable execution
+- Allow adding new users without re-encrypting the file
+- Support both binary and base64 formats for key files
+- Support CLI automation and scripting
+
+** Non-Goals
+- No write access control: this system assumes a trusted Git repository
+- No automatic key revocation or rotation
+- No UI or web interface (CLI only)
+- No end-to-end identity or signature verification
+
+** Installation
+1. Clone the repo
+2. Install GraalVM and native-image (optional)
+3. Build with Leiningen:
+   #+begin_src shell
+   lein uberjar
+   #+end_src
+4. (Optional) Compile to native binary:
+   #+begin_src shell
+   native-image \
+     --no-fallback \
+     --report-unsupported-elements-at-runtime \
+     -H:+ReportExceptionStackTraces \
+     -H:Name=yap \
+     -H:ReflectionConfigurationFiles=reflect-config.json \
+     -jar target/yap-0.1.0-SNAPSHOT-standalone.jar
+   #+end_src
+
+** Usage
+All commands follow the pattern:
+#+begin_src shell
+lein run -m MODE [options]
+#+end_src
+
+*** Generate Keypairs
+#+begin_src shell
+lein run -m genkeys -o alice
+#+end_src
+Creates:
+- alice_priv1.json / alice_pub1.json
+- alice_priv2.json / alice_pub2.json
+
+*** Encrypt File for Multiple Recipients
+#+begin_src shell
+lein run -m encrypt -i secret.txt -o secret.enc \
+         --pub alice_pub1.json,bob_pub1.json \
+         --b64
+#+end_src
+Creates:
+- secret.enc (AES-encrypted file)
+- secret.enc.key0 (base64 AES key encrypted with alice_pub1)
+- secret.enc.key1 (base64 AES key encrypted with bob_pub1)
+
+*** Decrypt File
+#+begin_src shell
+lein run -m decrypt -i secret.enc \
+         --key secret.enc.key1 \
+         --priv bob_priv1.json \
+         -o secret_decrypted.txt
+#+end_src
+
+*** Add New Recipient
+#+begin_src shell
+lein run -m adduser \
+         -i secret.enc.key0 \
+         --pub carol_pub.json \
+         -o 2 --b64
+#+end_src
+Creates:
+- secret.enc.key0.key2 (base64 encrypted key for Carol)
+
+*** Generate Reflection Config for GraalVM
+#+begin_src shell
+lein run -m reflect -o reflect-config.json
+#+end_src
+
+** Test
+#+begin_src shell
+lein test
+#+end_src
+Includes:
+- Round-trip encryption/decryption
+- Decryption with wrong key
+- Corrupted key file
+- Corrupted ciphertext
+
+** Directory Layout
+- `src/yap/core.clj`  CLI and crypto logic
+- `test/yap/core_test.clj`  unit and integration tests
+
+** License
+MIT License
